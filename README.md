@@ -2,39 +2,63 @@
 
 A lightweight Artificial Neural Network (ANN) service built with Node.js and TypeScript.
 
-## Getting Started
-
-Install dependencies and run the development server:
+## Quick start
 
 ```bash
 npm install
-npm run dev
+npm run dev    # start server on http://localhost:3000
+npm test       # run tests
 ```
 
-### Available Scripts
+## Dataset format
 
-- `npm run dev` – start the development server with automatic reloads.
-- `npm run build` – compile TypeScript to JavaScript.
-- `npm start` – run the compiled application from `dist`.
-- `npm test` – execute the Jest test suite.
-- `npm run lint` – lint source files with ESLint and Prettier.
-- `npm run typecheck` – type-check the project without emitting files.
+CSV with a single numeric column (one value per line, no header).
 
-## Endpoints Overview
+Example `data.csv`:
 
-| Method | Endpoint   | Description                           |
-| ------ | ---------- | ------------------------------------- |
-| GET    | `/health`  | Health check endpoint.                |
-| POST   | `/echo`    | Echoes back a validated `message`.    |
-| POST   | `/upload`  | Accepts a CSV file for processing.    |
+```
+0.12
+-0.08
+0.34
+```
 
-These routes are defined in `src/app.ts` and are meant as a starting point for building an ANN service. Static assets such as Chart.js can be served from a public directory as needed.
-
-## Building & Running
+Upload or generate data:
 
 ```bash
-npm run build
-npm start
+curl -F "file=@data.csv" http://localhost:3000/api/datasets/upload
+curl -X POST http://localhost:3000/api/datasets/generate \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"sine","length":100,"noise":0.1}'
 ```
 
-The server listens on port `3000` by default.
+## API reference
+
+```bash
+# health check
+curl http://localhost:3000/health
+
+# train a model
+curl -X POST http://localhost:3000/api/train \
+  -H "Content-Type: application/json" \
+  -d '{"datasetPath":"data/example.csv","window":5,"epochs":50}'
+
+# list runs and fetch metrics
+curl http://localhost:3000/api/runs
+curl http://localhost:3000/api/runs/<RUN_ID>
+
+# predict the next value
+curl -X POST http://localhost:3000/api/predict \
+  -H "Content-Type: application/json" \
+  -d '{"runId":"<RUN_ID>","context":[0.1,0.2,0.3,0.4,0.5]}'
+```
+
+## Dashboard
+
+Browse to `http://localhost:3000/dashboard` to view charts and metrics for the most recent run.
+
+## Notes on metrics and windowing
+
+Training samples are built using a sliding window: each window of `w` sequential values predicts the next value, yielding `series.length - w` examples. Splits default to 30 % train, 10 % validation, and the remainder test.
+
+Metrics reported per run include root mean square error, absolute and relative percentage errors, and average cumulative error. These summarize prediction accuracy and bias over the evaluated sequence.
+
