@@ -1,48 +1,31 @@
-import express, { Request } from 'express';
-import multer from 'multer';
-import fs from 'fs';
-import { parse } from 'csv-parse';
-import { z } from 'zod';
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+
+import datasetsRouter from './routes/datasets.js';
+import trainRouter from './routes/train.js';
+import predictRouter from './routes/predict.js';
+import runsRouter from './routes/runs.js';
+
+const publicDir = path.resolve('public');
 
 const app = express();
+
+app.use(cors());
 app.use(express.json());
+app.use('/public', express.static(publicDir));
+
+app.use('/api/datasets', datasetsRouter);
+app.use('/api/train', trainRouter);
+app.use('/api/predict', predictRouter);
+app.use('/api/runs', runsRouter);
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ ok: true });
 });
 
-app.post('/echo', (req, res) => {
-  const schema = z.object({ message: z.string() });
-  const result = schema.safeParse(req.body);
-  if (!result.success) {
-    return res.status(400).json(result.error.flatten());
-  }
-  res.json({ message: result.data.message });
+app.get('/dashboard', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'dashboard.html'));
 });
-
-const upload = multer({ dest: 'data/uploads/' });
-app.post(
-  '/upload',
-  upload.single('file'),
-  (req: Request & { file?: Express.Multer.File }, res) => {
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ error: 'file required' });
-    }
-    const records: unknown[] = [];
-    fs.createReadStream(file.path)
-      .pipe(parse())
-      .on('data', (data) => records.push(data))
-      .on('end', () => res.json({ rows: records.length }))
-      .on('error', (err) => res.status(500).json({ error: err.message }));
-  },
-);
-
-if (process.env.NODE_ENV !== 'test') {
-  const port = process.env.PORT || 3000;
-  app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-  });
-}
 
 export default app;
