@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ANN Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>Latest Run</h1>
+  <canvas id="predChart" width="600" height="300"></canvas>
+  <canvas id="errChart" width="600" height="300"></canvas>
+  <script>
+    async function load() {
+      const res = await fetch('/metrics/latest');
+      if (!res.ok) return;
+      const data = await res.json();
+      const labels = data.actual.map((_, i) => i);
+      new Chart(document.getElementById('predChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Actual', data: data.actual, borderColor: 'blue', fill: false },
+            { label: 'Predicted', data: data.predicted, borderColor: 'orange', fill: false }
+          ]
+        }
+      });
+      new Chart(document.getElementById('errChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Absolute Error', data: data.metrics.absErrors, borderColor: 'red', fill: false }
+          ]
+        }
+      });
+    }
+    load();
+  </script>
+</body>
+</html>
