@@ -24,6 +24,7 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+// Serve the client-side dashboard page
 app.get('/dashboard', (_req, res) => {
   res.sendFile(path.join(publicDir, 'dashboard.html'));
 });

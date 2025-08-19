@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ANN Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>ANN Dashboard</h1>
+  <div id="status">Loading...</div>
+  <div id="metrics" style="display: none;">
+    <div>RMS: <span id="rms"></span></div>
+    <div>Cumulative Error: <span id="cum-error"></span></div>
+  </div>
+  <canvas id="actual-pred-chart"></canvas>
+  <canvas id="error-chart"></canvas>
+
+  <script type="module">
+    const statusEl = document.getElementById('status');
+    const metricsEl = document.getElementById('metrics');
+    const rmsEl = document.getElementById('rms');
+    const cumErrorEl = document.getElementById('cum-error');
+
+    async function fetchJSON(url) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`Request failed: ${res.status}`);
+      }
+      return res.json();
+    }
+
+    function renderCharts(labels, actual, predicted, absError) {
+      new Chart(document.getElementById('actual-pred-chart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Actual', data: actual, borderColor: 'blue', fill: false },
+            { label: 'Predicted', data: predicted, borderColor: 'orange', fill: false },
+          ],
+        },
+      });
+
+      new Chart(document.getElementById('error-chart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Absolute Error', data: absError, backgroundColor: 'rgba(255,99,132,0.5)' },
+          ],
+        },
+      });
+    }
+
+    function displayMetrics(absError, metrics) {
+      const rms =
+        metrics && typeof metrics.rms === 'number'
+          ? metrics.rms
+          : Math.sqrt(absError.reduce((sum, e) => sum + e * e, 0) / absError.length);
+      const cumulative = absError.reduce((sum, e) => sum + e, 0);
+      rmsEl.textContent = rms.toFixed(4);
+      cumErrorEl.textContent = cumulative.toFixed(4);
+      metricsEl.style.display = 'block';
+    }
+
+    async function init() {
+      try {
+        const runs = await fetchJSON('/api/runs');
+        if (!Array.isArray(runs) || runs.length === 0) {
+          statusEl.textContent = 'No runs yet.';
+          return;
+        }
+        const latestId = runs[0].id;
+        const run = await fetchJSON(`/api/runs/${latestId}`);
+        const { yTrueTest, yPredTest, metrics } = run;
+        if (
+          !Array.isArray(yTrueTest) ||
+          !Array.isArray(yPredTest) ||
+          yTrueTest.length !== yPredTest.length
+        ) {
+          statusEl.textContent = 'Incomplete run data.';
+          return;
+        }
+        statusEl.textContent = '';
+        const labels = yTrueTest.map((_, i) => i + 1);
+        const absError = yTrueTest.map((v, i) => Math.abs(v - yPredTest[i]));
+        renderCharts(labels, yTrueTest, yPredTest, absError);
+        displayMetrics(absError, metrics);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Failed to load dashboard.';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
