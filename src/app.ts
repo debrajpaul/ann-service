@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 
@@ -26,6 +26,28 @@ app.get('/health', (_req, res) => {
 
 app.get('/dashboard', (_req, res) => {
   res.sendFile(path.join(publicDir, 'dashboard.html'));
+});
+
+// 404 handler for unknown routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+// Centralized error handler
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const status =
+    typeof (err as { status?: number }).status === 'number' &&
+    (err as { status: number }).status >= 400 &&
+    (err as { status: number }).status < 500
+      ? (err as { status: number }).status
+      : 500;
+  const message = err instanceof Error ? err.message : 'Internal Server Error';
+  if (status === 500) {
+    // Log server errors for debugging
+    console.error(err);
+  }
+  res.status(status).json({ error: message });
 });
 
 export default app;
