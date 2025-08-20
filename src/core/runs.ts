@@ -11,8 +11,7 @@ export interface RunMeta {
   modelPath?: string;
 }
 
-export interface Run
-  extends Omit<RunMeta, 'metrics' | 'modelPath'> {
+export interface Run extends Omit<RunMeta, 'metrics' | 'modelPath'> {
   id: string;
   createdAt: string;
   metrics: unknown | null;
@@ -61,8 +60,6 @@ export async function getRun(runId: string): Promise<Run | undefined> {
 export async function listRuns(): Promise<Run[]> {
   const runs = await listJSON<Run>('runs');
   return runs.sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 }
-

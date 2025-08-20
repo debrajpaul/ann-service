@@ -50,4 +50,3 @@ describe('runs', () => {
     expect(runs.map((r) => r.id)).toEqual([run2.id, run1.id]);
   });
 });
-

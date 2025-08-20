@@ -1,4 +1,9 @@
-import { rms, absoluteErrors, relativeErrorsPct, cumulativeError } from '../src/core/metrics';
+import {
+  rms,
+  absoluteErrors,
+  relativeErrorsPct,
+  cumulativeError,
+} from '../src/core/metrics';
 
 describe('metrics sanity checks', () => {
   it('computes rms correctly for tiny arrays', () => {
@@ -25,7 +30,7 @@ describe('metrics sanity checks', () => {
   it('computes cumulative error', () => {
     const yTrue = [1, 2, 3];
     const yPred = [2, 1, 3];
-    const expected = ((2 - 1) + (1 - 2) + (3 - 3)) / yTrue.length;
+    const expected = (2 - 1 + (1 - 2) + (3 - 3)) / yTrue.length;
     expect(cumulativeError(yTrue, yPred)).toBeCloseTo(expected);
   });
 });

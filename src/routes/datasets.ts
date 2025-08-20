@@ -91,7 +91,10 @@ function generateDuffing(length: number): number[] {
   for (let i = 0; i < limit; i++) {
     const dx = y;
     const dy =
-      -delta * y - alpha * x - beta * x * x * x + gamma * Math.cos(omega * i * dt);
+      -delta * y -
+      alpha * x -
+      beta * x * x * x +
+      gamma * Math.cos(omega * i * dt);
     x += dx * dt;
     y += dy * dt;
     series.push(x);
@@ -136,9 +139,9 @@ router.post('/generate', async (req, res) => {
   res.json({ datasetId, path: filePath });
 });
 
-async function listCsvFiles(dir: string): Promise<
-  { datasetId: string; path: string; length: number }[]
-> {
+async function listCsvFiles(
+  dir: string,
+): Promise<{ datasetId: string; path: string; length: number }[]> {
   const entries = await fs.promises.readdir(dir, { withFileTypes: true });
   const items: { datasetId: string; path: string; length: number }[] = [];
   for (const entry of entries) {
