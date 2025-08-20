@@ -1,6 +1,9 @@
+import fs from 'fs';
 import {
   parseCSVToSeries,
+  parseCSVToMatrix,
   slidingWindow,
+  slidingWindowMatrix,
   trainValTestSplit,
   fitMinMax,
 } from './data';
@@ -9,6 +12,22 @@ describe('parseCSVToSeries', () => {
   it('parses newline separated values', () => {
     const csv = '1\n2\n3\n';
     expect(parseCSVToSeries(csv)).toEqual([1, 2, 3]);
+  });
+});
+
+describe('parseCSVToMatrix', () => {
+  it('parses multi-column CSV into matrix and target', () => {
+    const csv = fs.readFileSync('tests/example-multivariate.csv', 'utf-8');
+    expect(parseCSVToMatrix(csv)).toEqual({
+      X: [
+        [1, 2, 3],
+        [2, 3, 4],
+        [3, 4, 5],
+        [4, 5, 6],
+        [5, 6, 7],
+      ],
+      y: [10, 11, 12, 13, 14],
+    });
   });
 });
 
@@ -21,6 +40,24 @@ describe('slidingWindow', () => {
       [2, 3, 4],
     ]);
     expect(y).toEqual([4, 5]);
+  });
+});
+
+describe('slidingWindowMatrix', () => {
+  it('creates windowed samples for feature matrix', () => {
+    const X = [
+      [1, 2],
+      [3, 4],
+      [5, 6],
+      [7, 8],
+    ];
+    const y = [10, 11, 12, 13];
+    const { x, y: out } = slidingWindowMatrix(X, y, 2);
+    expect(x).toEqual([
+      [1, 2, 3, 4],
+      [3, 4, 5, 6],
+    ]);
+    expect(out).toEqual([12, 13]);
   });
 });
 
