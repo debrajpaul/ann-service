@@ -1,5 +1,6 @@
 import * as tf from '@tensorflow/tfjs-node';
 import { slidingWindow, trainValTestSplit } from './data';
+import { DEFAULT_EPOCHS, DEFAULT_WINDOW } from '../config.js';
 
 export function buildMLP(inputSize: number, hidden = 32): tf.Sequential {
   const model = tf.sequential();
@@ -17,8 +18,8 @@ export function buildMLP(inputSize: number, hidden = 32): tf.Sequential {
 
 export async function trainModel(
   series: number[],
-  window = 5,
-  epochs = 50,
+  window = DEFAULT_WINDOW,
+  epochs = DEFAULT_EPOCHS,
   ratios: { train?: number; val?: number } = { train: 0.3, val: 0.1 },
 ): Promise<{
   model: tf.Sequential;

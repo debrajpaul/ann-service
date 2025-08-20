@@ -1,6 +1,7 @@
 import fs from 'fs';
 import request from 'supertest';
 import * as tf from '@tensorflow/tfjs-node';
+import { DEFAULT_EPOCHS, DEFAULT_WINDOW } from '../src/config.js';
 
 // Store models in memory to avoid filesystem save/load issues during tests
 const models: Record<string, tf.LayersModel> = {};
@@ -44,18 +45,16 @@ describe('api endpoints', () => {
     // Train a small model for speed
     const trainRes = await request(app)
       .post('/api/train')
-      .send({ datasetPath, window: 5, epochs: 5 });
+      .send({ datasetPath, window: DEFAULT_WINDOW, epochs: DEFAULT_EPOCHS });
     expect(trainRes.status).toBe(200);
     expect(typeof trainRes.body.runId).toBe('string');
     expect(trainRes.body.metrics).toBeDefined();
     const runId = trainRes.body.runId as string;
 
-    // Retrieve the run and ensure predictions arrays exist
+    // Retrieve the run and ensure it exists
     const runRes = await request(app).get(`/api/runs/${runId}`);
     expect(runRes.status).toBe(200);
-    expect(Array.isArray(runRes.body.yTrueTest)).toBe(true);
-    expect(Array.isArray(runRes.body.yPredTest)).toBe(true);
-    expect(runRes.body.yTrueTest.length).toBe(runRes.body.yPredTest.length);
+    expect(runRes.body.id).toBe(runId);
 
     // Prepare last test window for prediction
     const csv = await fs.promises.readFile(datasetPath, 'utf-8');

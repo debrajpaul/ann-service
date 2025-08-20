@@ -5,6 +5,7 @@ import path from 'path';
 
 import { newId } from '../lib/ids.js';
 import { parseCSVToSeries } from '../core/data.js';
+import { MAX_DATASET_LENGTH } from '../config.js';
 
 const router = Router();
 
@@ -34,6 +35,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   if (series.some((v) => Number.isNaN(v))) {
     res.status(400).json({ error: 'CSV must contain only numeric values' });
     return;
+  }
+  if (series.length > MAX_DATASET_LENGTH) {
+    series = series.slice(0, MAX_DATASET_LENGTH);
   }
 
   const datasetId = newId();
@@ -114,11 +118,12 @@ router.post('/generate', async (req, res) => {
     return;
   }
 
+  const cappedLength = Math.min(length, MAX_DATASET_LENGTH);
   let data: number[];
   if (kind === 'sine') {
-    data = generateSine(length, noise ?? 0);
+    data = generateSine(cappedLength, noise ?? 0);
   } else if (kind === 'duffing') {
-    data = generateDuffing(length);
+    data = generateDuffing(cappedLength);
   } else {
     res.status(400).json({ error: 'Unknown kind' });
     return;

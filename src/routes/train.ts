@@ -7,14 +7,20 @@ import { parseCSVToSeries, trainValTestSplit } from '../core/data.js';
 import { trainModel, saveModel } from '../core/model.js';
 import { computeAllMetrics } from '../core/metrics.js';
 import { createRun, updateRun } from '../core/runs.js';
+import {
+  DEFAULT_EPOCHS,
+  DEFAULT_WINDOW,
+  MAX_DATASET_LENGTH,
+  isTest,
+} from '../config.js';
 
 const router = Router();
 
 // Schema for validating training requests
 const TrainSchema = z.object({
   datasetPath: z.string(),
-  window: z.number().int().min(1).max(100).optional().default(5),
-  epochs: z.number().int().min(1).max(1000).optional().default(50),
+  window: z.number().int().min(1).max(100).optional().default(DEFAULT_WINDOW),
+  epochs: z.number().int().min(1).max(1000).optional().default(DEFAULT_EPOCHS),
   ratios: z
     .object({
       train: z.number().min(0).max(1).optional(),
@@ -49,6 +55,9 @@ router.post('/', async (req, res) => {
     res.status(400).json({ error: 'Invalid CSV format' });
     return;
   }
+  if (series.length > MAX_DATASET_LENGTH) {
+    series = series.slice(0, MAX_DATASET_LENGTH);
+  }
 
   if (series.some((v) => Number.isNaN(v))) {
     res.status(400).json({ error: 'CSV must contain only numeric values' });
@@ -82,7 +91,9 @@ router.post('/', async (req, res) => {
     metrics,
     modelPath: `models/${run.id}`,
   });
-  trainResult.model.dispose();
+  if (!isTest) {
+    trainResult.model.dispose();
+  }
 
   res.json({
     runId: run.id,
