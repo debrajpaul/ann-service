@@ -21,9 +21,13 @@ function prng(seed: number): () => number {
 /**
  * Add tiny deterministic noise to a sequence.
  */
-export function addTinyNoise(seq: number[], seed = 1, amplitude = 0.01): number[] {
+export function addTinyNoise(
+  seq: number[],
+  seed = 1,
+  amplitude = 0.01,
+): number[] {
   const rand = prng(seed);
-  return seq.map(v => v + (rand() * 2 - 1) * amplitude);
+  return seq.map((v) => v + (rand() * 2 - 1) * amplitude);
 }
 
 // Pre-generated fixtures

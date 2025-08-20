@@ -11,7 +11,10 @@ jest.mock('../src/core/model.ts', () => {
     ...actual,
     saveModel: async (model: tf.LayersModel, runId: string) => {
       // Clone the model so the original can be disposed by the route
-      const cloned = (model as any).clone ? (model as any).clone() : model;
+      const extendedModel = model as tf.LayersModel & {
+        clone?: () => tf.LayersModel;
+      };
+      const cloned = extendedModel.clone ? extendedModel.clone() : model;
       models[runId] = cloned;
     },
     loadModel: async (runId: string) => models[runId],
@@ -59,7 +62,10 @@ describe('api endpoints', () => {
     // Prepare last test window for prediction
     const csv = await fs.promises.readFile(datasetPath, 'utf-8');
     const series = csv.trim().split(/\r?\n/).map(Number);
-    const { endTest } = trainRes.body.indexes as { startTest: number; endTest: number };
+    const { endTest } = trainRes.body.indexes as {
+      startTest: number;
+      endTest: number;
+    };
     const context = series.slice(endTest - 1, endTest - 1 + 5);
 
     const predRes = await request(app)
