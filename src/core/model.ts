@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs-node';
-import { slidingWindow, trainValTestSplit } from './data';
+import { slidingWindow, slidingWindowMatrix, trainValTestSplit } from './data';
 import { DEFAULT_EPOCHS, DEFAULT_WINDOW } from '../config.js';
 
 export function buildMLP(inputSize: number, hidden = 32): tf.Sequential {
@@ -17,17 +17,38 @@ export function buildMLP(inputSize: number, hidden = 32): tf.Sequential {
 }
 
 export async function trainModel(
-  series: number[],
+  seriesOrFeatures: number[] | number[][],
   window = DEFAULT_WINDOW,
   epochs = DEFAULT_EPOCHS,
   ratios: { train?: number; val?: number } = { train: 0.3, val: 0.1 },
+  target?: number[],
 ): Promise<{
   model: tf.Sequential;
   yTrueTest: number[];
   yPredTest: number[];
   indexes: { startTest: number; endTest: number };
 }> {
-  const { x, y } = slidingWindow(series, window);
+  let x: number[][];
+  let y: number[];
+  let inputSize: number;
+
+  if (Array.isArray(seriesOrFeatures[0])) {
+    if (!target) {
+      throw new Error('Target series required for multivariate training');
+    }
+    const features = seriesOrFeatures as number[][];
+    const sw = slidingWindowMatrix(features, target, window);
+    x = sw.x;
+    y = sw.y;
+    inputSize = features[0].length * window;
+  } else {
+    const series = seriesOrFeatures as number[];
+    const sw = slidingWindow(series, window);
+    x = sw.x;
+    y = sw.y;
+    inputSize = window;
+  }
+
   const split = trainValTestSplit(x.length, ratios);
 
   const [startTrain, endTrain] = split.train;
@@ -36,23 +57,30 @@ export async function trainModel(
 
   const xTrain = tf.tensor2d(x.slice(startTrain, endTrain));
   const yTrain = tf.tensor1d(y.slice(startTrain, endTrain));
-  const xVal = tf.tensor2d(x.slice(startVal, endVal));
-  const yVal = tf.tensor1d(y.slice(startVal, endVal));
+  const xValArr = x.slice(startVal, endVal);
+  const yValArr = y.slice(startVal, endVal);
+  const xVal = xValArr.length ? tf.tensor2d(xValArr) : null;
+  const yVal = yValArr.length ? tf.tensor1d(yValArr) : null;
   const xTest = tf.tensor2d(x.slice(startTest, endTest));
   const yTrueTest = y.slice(startTest, endTest);
 
-  const model = buildMLP(window, 32);
+  const model = buildMLP(inputSize, 32);
 
-  await model.fit(xTrain, yTrain, {
+  const fitOptions: tf.ModelFitArgs = {
     epochs,
-    validationData: [xVal, yVal],
     verbose: 0,
-  });
+  };
+  if (xVal && yVal) {
+    fitOptions.validationData = [xVal, yVal];
+  }
+  await model.fit(xTrain, yTrain, fitOptions);
 
   const yPredTensor = model.predict(xTest) as tf.Tensor;
   const yPredTest = Array.from(await yPredTensor.data());
 
-  tf.dispose([xTrain, yTrain, xVal, yVal, xTest, yPredTensor]);
+  const tensors: tf.Tensor[] = [xTrain, yTrain, xTest, yPredTensor];
+  if (xVal && yVal) tensors.push(xVal, yVal);
+  tf.dispose(tensors);
 
   return { model, yTrueTest, yPredTest, indexes: { startTest, endTest } };
 }

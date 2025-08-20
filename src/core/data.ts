@@ -19,6 +19,32 @@ export function parseCSVToSeries(csv: string): number[] {
 }
 
 /**
+ * Parse a CSV string into feature matrix `X` and target vector `y`.
+ *
+ * Each row in the CSV is expected to contain multiple numeric features followed
+ * by a single target value. The function splits the last column as `y` and the
+ * remaining columns as `X`.
+ *
+ * @param csv - Raw CSV string with rows like `f1,f2,...,fn,y`.
+ * @returns Object containing feature matrix `X` and target vector `y`.
+ */
+export function parseCSVToMatrix(csv: string): { X: number[][]; y: number[] } {
+  const records: string[][] = parse(csv, {
+    columns: false,
+    skip_empty_lines: true,
+    trim: true,
+  });
+  const X: number[][] = [];
+  const y: number[] = [];
+  for (const row of records) {
+    const nums = row.map((v) => Number(v));
+    X.push(nums.slice(0, -1));
+    y.push(nums[nums.length - 1]);
+  }
+  return { X, y };
+}
+
+/**
  * Create sliding window samples from a numeric series.
  *
  * For a given window size `w` and series `[v0, v1, ... vn]`, this function
@@ -40,6 +66,33 @@ export function slidingWindow(
     y.push(series[i + window]);
   }
   return { x, y };
+}
+
+/**
+ * Create sliding window samples from a multivariate feature matrix and target.
+ *
+ * For feature matrix `X` shaped `[t, nFeatures]` and target series `y`, this
+ * function produces flattened windows of shape `window * nFeatures` to predict
+ * the value of `y` at `t + window`.
+ *
+ * @param X - Feature matrix where each row is a time step.
+ * @param y - Target series aligned with `X`.
+ * @param window - Number of time steps per sample.
+ * @returns Object containing windowed inputs `x` and target outputs `y`.
+ */
+export function slidingWindowMatrix(
+  X: number[][],
+  y: number[],
+  window: number,
+): { x: number[][]; y: number[] } {
+  const x: number[][] = [];
+  const out: number[] = [];
+  for (let i = 0; i + window < y.length; i++) {
+    const windowSlice = X.slice(i, i + window).flat();
+    x.push(windowSlice);
+    out.push(y[i + window]);
+  }
+  return { x, y: out };
 }
 
 interface SplitResult {
